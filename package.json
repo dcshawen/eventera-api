@@ -1,0 +1,16 @@
+{
+  "name": "eventera-api",
+  "version": "1.0.0",
+  "description": "API layer for Eventera",
+  "license": "ISC",
+  "author": "Dan Shaw",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon app.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
