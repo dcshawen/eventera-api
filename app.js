@@ -1,6 +1,16 @@
-import http from 'http';
-http.createServer(function (req, res) {
-  res.writeHead(200, { 'Content-Type': 'text/html'});
-  res.write('Hello World\n');
-  res.end();
-}).listen(3000);
+import express from 'express';
+
+const port = process.env.PORT || 3000;
+const app = express();
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
+
+app.get('/', (req, res) => {
+  res.send('Hello Express!');
+});
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`);
+});
