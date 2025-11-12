@@ -40,4 +40,10 @@ router.get('/:id', async (req, res) => {
 	}
 });
 
+// GET: /api/tickets
+router.get('/tickets', async (req, res) => {
+	// This route is a placeholder for future implementation
+	return res.status(501).send('Not implemented yet');
+});
+
 export default router;
