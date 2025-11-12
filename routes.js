@@ -5,6 +5,12 @@ import 'dotenv/config';
 const router = express.Router();
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
+// GET: /api/tickets
+router.get('/tickets', async (req, res) => {
+	// This route is a placeholder for future implementation
+	return res.status(501).send('Not implemented yet');
+});
+
 // GET: /api/events
 router.get('/', async (req, res) => {
 	try {
@@ -38,12 +44,6 @@ router.get('/:id', async (req, res) => {
 	} catch (err) {
 		res.status(500).send('Database query failed');
 	}
-});
-
-// GET: /api/tickets
-router.get('/tickets', async (req, res) => {
-	// This route is a placeholder for future implementation
-	return res.status(501).send('Not implemented yet');
 });
 
 export default router;
