@@ -5,6 +5,7 @@ import 'dotenv/config';
 const router = express.Router();
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
+// Must be defined before other routes to avoid conflicts.
 // GET: /api/tickets
 router.get('/tickets', async (req, res) => {
 	// This route is a placeholder for future implementation
