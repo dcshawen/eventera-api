@@ -47,4 +47,23 @@ router.get('/:id', async (req, res) => {
 	}
 });
 
+// POST: /api/events
+router.post('/', async (req, res) => {
+    const ticket = req.body;
+
+    // To-Do: validate proper JSON structure
+
+    //
+    // TO-DO: Add validation for photo object
+    //
+
+    await sql.connect(dbConnectionString);
+
+    const result = await sql.query`
+
+		`;
+
+    res.json({ message: 'Comment added successfully.'});
+});
+
 export default router;
