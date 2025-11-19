@@ -5,12 +5,12 @@ import 'dotenv/config';
 const router = express.Router();
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
-// Must be defined before other routes to avoid conflicts.
+/* // Must be defined before other routes to avoid conflicts.
 // GET: /api/tickets
 router.get('/tickets', async (req, res) => {
 	// This route is a placeholder for future implementation
 	return res.status(501).send('Not implemented yet');
-});
+}); */
 
 // GET: /api/events
 router.get('/', async (req, res) => {
@@ -48,22 +48,41 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST: /api/events
+// Expects headers: PurchaserName, AstronomicalEventId
 router.post('/', async (req, res) => {
-    const ticket = req.body;
+    // Debug: Print all headers to the terminal to see what is actually arriving
+    console.log('Headers received:', req.headers);
 
-    // To-Do: validate proper JSON structure
+    // Extract data from headers (headers are case-insensitive in Express)
+    const purchaserName = req.get('PurchaserName');
+    const eventId = req.get('AstronomicalEventId');
 
-    //
-    // TO-DO: Add validation for photo object
-    //
+    if (!purchaserName || !eventId) {
+        return res.status(400).json({ 
+            message: "Missing required headers. Please provide 'PurchaserName' and 'AstronomicalEventId'." 
+        });
+    }
+		
+		// Construct ticket for response
+    const ticket = {
+        PurchaserName: purchaserName,
+        PurchaseDateTime: new Date().toISOString(),
+        AstronomicalEventId: parseInt(eventId),
+    };
 
-    await sql.connect(dbConnectionString);
+		try {
+			await sql.connect(dbConnectionString);
+			const result = await sql.query`INSERT INTO dbo.Ticket (PurchaserName, PurchaseDateTime, AstronomicalEventID)
+				VALUES (${purchaserName}, GETDATE(), ${eventId});
+				SELECT SCOPE_IDENTITY() AS TicketId;`;
+			const ticketId = result.recordset[0].TicketId;
+		} catch (err) {
+			return res.status(500).send('Database insert failed');
+		}
+		
 
-    const result = await sql.query`
-
-		`;
-
-    res.json({ message: 'Comment added successfully.'});
+    // Return the created ticket
+    res.status(201).json(ticket);
 });
 
 export default router;
