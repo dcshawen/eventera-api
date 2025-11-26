@@ -36,12 +36,33 @@ router.get('/:id', async (req, res) => {
 
 	try {
 		await sql.connect(dbConnectionString);
-		const result = await sql.query`SELECT * FROM dbo.AstronomicalEvent WHERE AstronomicalEventID = ${eventId}`;
+		const result = await sql.query`SELECT * FROM dbo.AstronomicalEvent 
+			LEFT JOIN dbo.Ticket ON dbo.AstronomicalEvent.AstronomicalEventID = dbo.Ticket.AstronomicalEventID
+			WHERE dbo.AstronomicalEvent.AstronomicalEventID = ${eventId}`;
 		console.dir(result);
 		if (result.recordset.length === 0) {
 			return res.status(404).send('Event not found');
 		}
-		res.json(result.recordset[0]);
+
+		const event = { ...result.recordset[0] };
+		event.Tickets = [];
+
+		result.recordset.forEach(row => {
+			if (row.PurchaserName) {
+				event.Tickets.push({
+					TicketID: row.TicketID,
+					PurchaserName: row.PurchaserName,
+					PurchaseDateTime: row.PurchaseDateTime,
+					AstronomicalEventID: row.AstronomicalEventID
+				});
+			}
+		});
+
+		delete event.TicketID;
+		delete event.PurchaserName;
+		delete event.PurchaseDateTime;
+
+		res.json(event);
 	} catch (err) {
 		res.status(500).send('Database query failed');
 	}
@@ -50,10 +71,8 @@ router.get('/:id', async (req, res) => {
 // POST: /api/events
 // Expects headers: PurchaserName, AstronomicalEventId
 router.post('/', async (req, res) => {
-    // Debug: Print all headers to the terminal to see what is actually arriving
     console.log('Headers received:', req.headers);
 
-    // Extract data from headers (headers are case-insensitive in Express)
     const purchaserName = req.get('PurchaserName');
     const eventId = req.get('AstronomicalEventId');
 
@@ -63,7 +82,6 @@ router.post('/', async (req, res) => {
         });
     }
 		
-		// Construct ticket for response
     const ticket = {
         PurchaserName: purchaserName,
         PurchaseDateTime: new Date().toISOString(),
