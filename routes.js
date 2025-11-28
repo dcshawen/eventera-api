@@ -5,12 +5,18 @@ import 'dotenv/config';
 const router = express.Router();
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
-/* // Must be defined before other routes to avoid conflicts.
+// Must be defined before other routes to avoid conflicts.
 // GET: /api/tickets
 router.get('/tickets', async (req, res) => {
-	// This route is a placeholder for future implementation
-	return res.status(501).send('Not implemented yet');
-}); */
+	try {
+		await sql.connect(dbConnectionString);
+		const result = await sql.query`SELECT * FROM dbo.Ticket`;
+		console.dir(result);
+		res.json(result.recordset);
+	} catch (err) {
+		res.status(500).send('Database query failed');
+	}
+});
 
 // GET: /api/events
 router.get('/', async (req, res) => {
@@ -69,16 +75,31 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST: /api/events
-// Expects headers: PurchaserName, AstronomicalEventId
 router.post('/', async (req, res) => {
-    console.log('Headers received:', req.headers);
+    console.log('Body received:', req.body);
 
-    const purchaserName = req.get('PurchaserName');
-    const eventId = req.get('AstronomicalEventId');
+    const { 
+        PurchaserName: purchaserName, 
+        AstronomicalEventId: eventId,
+        CreditNumber: creditNumber,
+        ExpDate: expDate,
+        CreditKey: creditKey,
+        PurchaserEmail: purchaserEmail,
+        PurchaserPhone: purchaserPhone,
+        PurchaserStreetNo: purchaserStreetNo,
+        PurchaserStreetName: purchaserStreetName,
+        PurchaserCity: purchaserCity,
+        PurchaserProvince: purchaserProvince,
+        PurchaserPostalCode: purchaserPostalCode,
+        PurchaserCountry: purchaserCountry
+    } = req.body;
+
+		console.log('Parsed PurchaserName:', purchaserName);
+		console.log('Parsed AstronomicalEventId:', eventId);
 
     if (!purchaserName || !eventId) {
         return res.status(400).json({ 
-            message: "Missing required headers. Please provide 'PurchaserName' and 'AstronomicalEventId'." 
+            message: "Missing required fields. Please provide 'PurchaserName' and 'AstronomicalEventId' in the request body." 
         });
     }
 		
@@ -86,21 +107,43 @@ router.post('/', async (req, res) => {
         PurchaserName: purchaserName,
         PurchaseDateTime: new Date().toISOString(),
         AstronomicalEventId: parseInt(eventId),
+        CreditNumber: creditNumber,
+        ExpDate: expDate,
+        CreditKey: creditKey,
+        PurchaserEmail: purchaserEmail,
+        PurchaserPhone: purchaserPhone,
+        PurchaserStreetNo: purchaserStreetNo,
+        PurchaserStreetName: purchaserStreetName,
+        PurchaserCity: purchaserCity,
+        PurchaserProvince: purchaserProvince,
+        PurchaserPostalCode: purchaserPostalCode,
+        PurchaserCountry: purchaserCountry
     };
 
-		try {
-			await sql.connect(dbConnectionString);
-			const result = await sql.query`INSERT INTO dbo.Ticket (PurchaserName, PurchaseDateTime, AstronomicalEventID)
-				VALUES (${purchaserName}, GETDATE(), ${eventId});
-				SELECT SCOPE_IDENTITY() AS TicketId;`;
-			const ticketId = result.recordset[0].TicketId;
-		} catch (err) {
-			return res.status(500).send('Database insert failed');
-		}
+	try {
+		await sql.connect(dbConnectionString);
+		const result = await sql.query`INSERT INTO dbo.Ticket (
+            PurchaserName, PurchaseDateTime, AstronomicalEventID,
+            CreditNumber, ExpDate, CreditKey,
+            PurchaserEmail, PurchaserPhone,
+            PurchaserStreetNo, PurchaserStreetName, PurchaserCity, PurchaserProvince, PurchaserPostalCode, PurchaserCountry
+        )
+			VALUES (
+                ${purchaserName}, GETDATE(), ${eventId},
+                ${creditNumber}, ${expDate}, ${creditKey},
+                ${purchaserEmail}, ${purchaserPhone},
+                ${purchaserStreetNo}, ${purchaserStreetName}, ${purchaserCity}, ${purchaserProvince}, ${purchaserPostalCode}, ${purchaserCountry}
+            );
+			SELECT SCOPE_IDENTITY() AS TicketId;`;
 		
+		const ticketId = result.recordset[0].TicketId;
 
-    // Return the created ticket
-    res.status(201).json(ticket);
+		// Return the created ticket
+		res.status(201).json(ticket);
+
+	} catch (err) {
+		return res.status(500).send('Database insert failed');
+	}
 });
 
 export default router;
