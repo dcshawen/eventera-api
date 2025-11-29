@@ -5,12 +5,30 @@ import 'dotenv/config';
 const router = express.Router();
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
-// Must be defined before other routes to avoid conflicts.
-// GET: /api/tickets
-router.get('/tickets', async (req, res) => {
+
+// GET: /api/events
+router.get('/', async (req, res) => {
 	try {
 		await sql.connect(dbConnectionString);
-		const result = await sql.query`SELECT * FROM dbo.Ticket`;
+		const result = await sql.query`SELECT 
+				dbo.AstronomicalEvent.AstronomicalEventID,
+				dbo.AstronomicalEvent.Title,
+				dbo.AstronomicalEvent.Description,
+				dbo.AstronomicalEvent.StartDateTime,
+				dbo.AstronomicalEvent.Filename,
+				dbo.AstronomicalEvent.CategoryID,
+				dbo.Category.Title AS Category
+			FROM dbo.AstronomicalEvent
+			INNER JOIN dbo.Category ON dbo.AstronomicalEvent.CategoryID = dbo.Category.CategoryID
+			ORDER BY dbo.AstronomicalEvent.StartDateTime DESC`;
+		
+		// Extract filename from path
+		result.recordset.forEach(event => {
+			if (event.Filename) {
+				event.Filename = event.Filename.split('/').pop();
+			}
+		});
+
 		console.dir(result);
 		res.json(result.recordset);
 	} catch (err) {
@@ -18,14 +36,11 @@ router.get('/tickets', async (req, res) => {
 	}
 });
 
-// GET: /api/events
-router.get('/', async (req, res) => {
+// GET: /api/tickets
+router.get('/tickets', async (req, res) => {
 	try {
 		await sql.connect(dbConnectionString);
-		const result = await sql.query`SELECT * FROM dbo.AstronomicalEvent
-			INNER JOIN dbo.Category ON dbo.AstronomicalEvent.CategoryID = dbo.Category.CategoryID
-			ORDER BY dbo.AstronomicalEvent.StartDateTime DESC`;
-		console.dir(result);
+		const result = await sql.query`SELECT * FROM dbo.Ticket`;
 		res.json(result.recordset);
 	} catch (err) {
 		res.status(500).send('Database query failed');
@@ -42,31 +57,27 @@ router.get('/:id', async (req, res) => {
 
 	try {
 		await sql.connect(dbConnectionString);
-		const result = await sql.query`SELECT * FROM dbo.AstronomicalEvent 
-			LEFT JOIN dbo.Ticket ON dbo.AstronomicalEvent.AstronomicalEventID = dbo.Ticket.AstronomicalEventID
-			WHERE dbo.AstronomicalEvent.AstronomicalEventID = ${eventId}`;
-		console.dir(result);
-		if (result.recordset.length === 0) {
+		
+		// Execute two queries: one for the event, one for its tickets
+		const result = await sql.query`
+			SELECT * FROM dbo.AstronomicalEvent WHERE AstronomicalEventID = ${eventId};
+			SELECT * FROM dbo.Ticket WHERE AstronomicalEventID = ${eventId};
+		`;
+
+		// result.recordsets[0] contains the results of the first query (Event)
+		if (result.recordsets[0].length === 0) {
 			return res.status(404).send('Event not found');
 		}
 
-		const event = { ...result.recordset[0] };
-		event.Tickets = [];
+		const event = result.recordsets[0][0];
+		
+		// Extract filename from path
+		if (event.Filename) {
+			event.Filename = event.Filename.split('/').pop();
+		}
 
-		result.recordset.forEach(row => {
-			if (row.PurchaserName) {
-				event.Tickets.push({
-					TicketID: row.TicketID,
-					PurchaserName: row.PurchaserName,
-					PurchaseDateTime: row.PurchaseDateTime,
-					AstronomicalEventID: row.AstronomicalEventID
-				});
-			}
-		});
-
-		delete event.TicketID;
-		delete event.PurchaserName;
-		delete event.PurchaseDateTime;
+		// result.recordsets[1] contains the results of the second query (Tickets)
+		event.Tickets = result.recordsets[1];
 
 		res.json(event);
 	} catch (err) {
@@ -76,8 +87,6 @@ router.get('/:id', async (req, res) => {
 
 // POST: /api/events
 router.post('/', async (req, res) => {
-    console.log('Body received:', req.body);
-
     const { 
         PurchaserName: purchaserName, 
         AstronomicalEventId: eventId,
@@ -93,9 +102,6 @@ router.post('/', async (req, res) => {
         PurchaserPostalCode: purchaserPostalCode,
         PurchaserCountry: purchaserCountry
     } = req.body;
-
-		console.log('Parsed PurchaserName:', purchaserName);
-		console.log('Parsed AstronomicalEventId:', eventId);
 
     if (!purchaserName || !eventId) {
         return res.status(400).json({ 
