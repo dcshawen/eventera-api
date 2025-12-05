@@ -148,6 +148,7 @@ router.post('/', async (req, res) => {
 		res.status(201).json(ticket);
 
 	} catch (err) {
+		console.error(err);
 		return res.status(500).send('Database insert failed');
 	}
 });
